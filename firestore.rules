@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: products
+    // Fields: sku, name, category, subcategory, type, spec, stockQuantity, minStock, isLowStock, barcode, createdAt, updatedAt
+    //
+    // Collection: transactions
+    // Fields: productId, type, quantity, previousStock, newStock, userId, timestamp, notes, jobId
+    //
+    // Collection: counters
+    // Fields: count
+    //
+    // Collection: maintenance_logs
+    // Fields: jobId, equipmentName, technicianId, technicianName, timestamp, partsUsed
+    //
+    // Collection: users
+    // Fields: email, role, name
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "muhammedraneesm@gmail.com" && request.auth.token.email_verified == true) ||
+        (userExists() && getUserData().role == 'admin')
+      );
+    }
+
+    function isStorekeeper() {
+      return isAuthenticated() && (isAdmin() || (userExists() && getUserData().role == 'storekeeper'));
+    }
+
+    function isTechnician() {
+      return isAuthenticated() && (isStorekeeper() || (userExists() && getUserData().role == 'technician'));
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['sku', 'name', 'category', 'subcategory', 'type', 'spec', 'stockQuantity', 'minStock']) &&
+             data.sku is string && data.sku.size() > 0 &&
+             data.name is string && data.name.size() > 0 &&
+             data.stockQuantity is number &&
+             data.minStock is number &&
+             (!('size' in data) || data.size is string) &&
+             (!('isLowStock' in data) || data.isLowStock is bool) &&
+             (!('barcode' in data) || data.barcode is string || data.barcode == null);
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['productId', 'type', 'quantity', 'previousStock', 'newStock', 'userId', 'timestamp']) &&
+             data.type in ['IN', 'OUT', 'ADJUST'] &&
+             data.quantity is number &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidMaintenanceLog(data) {
+      return data.keys().hasAll(['jobId', 'equipmentName', 'technicianId', 'technicianName', 'timestamp', 'partsUsed']) &&
+             data.technicianId == request.auth.uid &&
+             data.partsUsed is list;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'name', 'uid']) &&
+             data.email is string &&
+             data.role in ['admin', 'storekeeper', 'technician'] &&
+             data.name is string &&
+             data.uid is string;
+    }
+
+    function isValidTool(data) {
+      return data.keys().hasAll(['name', 'serialNumber', 'category', 'status', 'condition', 'createdAt', 'updatedAt']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.serialNumber is string && data.serialNumber.size() > 0 &&
+             data.status in ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'LOST'] &&
+             data.condition in ['GOOD', 'FAIR', 'POOR'] &&
+             (!('imageUrl' in data) || data.imageUrl is string || data.imageUrl == null) &&
+             (!('assignedTo' in data) || data.assignedTo is string || data.assignedTo == null) &&
+             (!('assignedToName' in data) || data.assignedToName is string || data.assignedToName == null) &&
+             (!('lastCheckedOut' in data) || data.lastCheckedOut is string || data.lastCheckedOut == null) &&
+             (!('barcode' in data) || data.barcode is string);
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['orderNumber', 'creatorId', 'creatorName', 'status', 'items', 'totalItems', 'createdAt', 'updatedAt']) &&
+             data.orderNumber is string &&
+             data.status in ['PENDING', 'ORDERED', 'RECEIVED', 'CANCELLED'] &&
+             data.items is list;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data);
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId && request.resource.data.role == resource.data.role && isValidUser(request.resource.data));
+    }
+
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create: if isStorekeeper() && isValidProduct(request.resource.data);
+      allow update: if (isStorekeeper() && isValidProduct(request.resource.data)) ||
+                    (isTechnician() && 
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stockQuantity', 'isLowStock', 'updatedAt']) &&
+                     request.resource.data.stockQuantity is number);
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated();
+      allow create: if isTechnician() && isValidTransaction(request.resource.data);
+    }
+
+    match /counters/{counterId} {
+      allow read, write: if isTechnician();
+    }
+
+    match /test/connection {
+      allow read: if isAuthenticated();
+    }
+
+    match /maintenance_logs/{logId} {
+      allow read: if isTechnician();
+      allow create: if isTechnician() && isValidMaintenanceLog(request.resource.data);
+    }
+
+    match /tools/{toolId} {
+      allow read: if isAuthenticated();
+      allow create: if isStorekeeper() && isValidTool(request.resource.data);
+      allow update: if (isStorekeeper() && isValidTool(request.resource.data)) ||
+                    (isTechnician() && 
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'assignedTo', 'assignedToName', 'lastCheckedOut', 'updatedAt', 'condition', 'imageUrl']) &&
+                     (request.resource.data.status in ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'LOST']));
+      allow delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated();
+      allow create: if isStorekeeper() && isValidOrder(request.resource.data);
+      allow update: if isStorekeeper() && isValidOrder(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

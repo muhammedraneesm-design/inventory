@@ -1,0 +1,7 @@
+{
+  "name": "Reem inventory",
+  "description": "Enterprise-grade Maintenance Inventory Management System with barcode scanning, real-time stock tracking, and automated SKU generation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

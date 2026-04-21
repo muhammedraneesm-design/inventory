@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A spare part or consumable item in the inventory.",
+      "type": "object",
+      "properties": {
+        "sku": { "type": "string", "description": "Unique SKU generated based on category, subcategory, type, and spec." },
+        "name": { "type": "string", "description": "Display name of the product." },
+        "category": { "type": "string" },
+        "subcategory": { "type": "string" },
+        "type": { "type": "string" },
+        "spec": { "type": "string" },
+        "stockQuantity": { "type": "number" },
+        "minStock": { "type": "number" },
+        "isLowStock": { "type": "boolean" },
+        "barcode": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sku", "name", "category", "subcategory", "type", "spec", "stockQuantity", "minStock"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A record of stock movement (IN, OUT, or ADJUST).",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "type": { "type": "string", "enum": ["IN", "OUT", "ADJUST"] },
+        "quantity": { "type": "number" },
+        "previousStock": { "type": "number" },
+        "newStock": { "type": "number" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" },
+        "jobId": { "type": "string" }
+      },
+      "required": ["productId", "type", "quantity", "previousStock", "newStock", "userId", "timestamp"]
+    },
+    "Counter": {
+      "title": "Counter",
+      "description": "Atomic counter for SKU generation.",
+      "type": "object",
+      "properties": {
+        "count": { "type": "number" }
+      },
+      "required": ["count"]
+    },
+    "MaintenanceLog": {
+      "title": "MaintenanceLog",
+      "description": "Record of a maintenance job and parts consumed.",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string" },
+        "equipmentName": { "type": "string" },
+        "technicianId": { "type": "string" },
+        "technicianName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "partsUsed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "sku": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" }
+            }
+          }
+        }
+      },
+      "required": ["jobId", "equipmentName", "technicianId", "timestamp", "partsUsed"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Application user with role-based access.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "technician", "storekeeper"] },
+        "name": { "type": "string" }
+      },
+      "required": ["email", "role", "name"]
+    },
+    "Tool": {
+      "title": "Tool",
+      "description": "A company tool or piece of equipment.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "IN_USE", "MAINTENANCE", "LOST"] },
+        "assignedTo": { "type": "string" },
+        "assignedToName": { "type": "string" },
+        "lastCheckedOut": { "type": "string", "format": "date-time" },
+        "condition": { "type": "string", "enum": ["GOOD", "FAIR", "POOR"] },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "serialNumber", "category", "status", "condition", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": { "schema": "Product", "description": "Collection of inventory items." },
+    "/transactions/{transactionId}": { "schema": "Transaction", "description": "History of stock movements." },
+    "/counters/{counterId}": { "schema": "Counter", "description": "SKU sequence counters." },
+    "/maintenance_logs/{logId}": { "schema": "MaintenanceLog", "description": "Maintenance job records." },
+    "/users/{userId}": { "schema": "User", "description": "User profiles and roles." },
+    "/tools/{toolId}": { "schema": "Tool", "description": "Register of company tools and equipment." }
+  }
+}
