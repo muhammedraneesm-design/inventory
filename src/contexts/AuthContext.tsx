@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocFromServer } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { UserProfile, UserRole } from '../types';
@@ -21,6 +21,8 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   login: () => Promise<void>;
+  loginWithEmail: (email: string, pass: string) => Promise<void>;
+  registerWithEmail: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthReady: boolean;
 }
@@ -83,12 +85,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithPopup(auth, provider);
   };
 
+  const loginWithEmail = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  const registerWithEmail = async (email: string, pass: string, name: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(userCredential.user, { displayName: name });
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout, isAuthReady }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, loginWithEmail, registerWithEmail, logout, isAuthReady }}>
       {children}
     </AuthContext.Provider>
   );
