@@ -190,9 +190,12 @@ export function Orders() {
 
   const [receivingOrder, setReceivingOrder] = useState<PurchaseOrder | null>(null);
   const [receiveQuants, setReceiveQuants] = useState<{[sku: string]: number}>({});
+  const [orderToCancel, setOrderToCancel] = useState<PurchaseOrder | null>(null);
+  const [itemToCancel, setItemToCancel] = useState<{order: PurchaseOrder, sku: string} | null>(null);
 
-  const cancelOrderItem = async (order: PurchaseOrder, sku: string) => {
-    if (!window.confirm(`Are you sure you want to cancel the item ${sku}? This cannot be undone.`)) return;
+  const cancelOrderItem = async () => {
+    if (!itemToCancel) return;
+    const { order, sku } = itemToCancel;
 
     setLoading(true);
     try {
@@ -216,6 +219,7 @@ export function Orders() {
       if (comparisonOrder && comparisonOrder.id === order.id) {
         setComparisonOrder({ ...comparisonOrder, items: updatedItems });
       }
+      setItemToCancel(null);
     } catch (error) {
       console.error(error);
       toast.error('Failed to cancel item.');
@@ -684,11 +688,7 @@ export function Orders() {
                           )}
                           {order.status !== 'RECEIVED' && order.status !== 'CANCELLED' && (
                             <button
-                              onClick={() => {
-                                if (window.confirm('Are you sure you want to cancel this order?')) {
-                                  updateOrderStatus(order.id, 'CANCELLED');
-                                }
-                              }}
+                              onClick={() => setOrderToCancel(order)}
                               className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                               title="Cancel Order"
                             >
@@ -703,6 +703,71 @@ export function Orders() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Order Cancel Confirmation Modal */}
+      {orderToCancel && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
+              <XCircle size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-zinc-900">Cancel Order?</h3>
+              <p className="text-sm text-zinc-500">
+                Are you sure you want to cancel {orderToCancel.orderNumber}? This will mark the order as void.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  updateOrderStatus(orderToCancel.id, 'CANCELLED');
+                  setOrderToCancel(null);
+                }}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-100"
+              >
+                Yes, Cancel Order
+              </button>
+              <button
+                onClick={() => setOrderToCancel(null)}
+                className="w-full bg-zinc-100 text-zinc-600 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Item Cancel Confirmation Modal */}
+      {itemToCancel && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
+              <XCircle size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-zinc-900">Cancel Item?</h3>
+              <p className="text-sm text-zinc-500">
+                Are you sure you want to void {itemToCancel.sku} from this order?
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={cancelOrderItem}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-100"
+              >
+                Yes, Cancel Item
+              </button>
+              <button
+                onClick={() => setItemToCancel(null)}
+                className="w-full bg-zinc-100 text-zinc-600 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -759,7 +824,7 @@ export function Orders() {
                         <td className="px-4 py-4 text-right">
                           {!item.isCancelled && !isFullyReceived && comparisonOrder.status !== 'CANCELLED' && (
                             <button
-                              onClick={() => cancelOrderItem(comparisonOrder, item.sku)}
+                              onClick={() => setItemToCancel({ order: comparisonOrder, sku: item.sku })}
                               className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                               title="Cancel Item"
                             >

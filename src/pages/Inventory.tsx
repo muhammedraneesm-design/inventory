@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, onSnapshot, doc, runTransaction, addDoc, getDocs, where, writeBatch } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, runTransaction, addDoc, getDocs, where, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Product } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, Scan, Plus, Minus, AlertCircle, X, PlusCircle, Edit2, Printer, ShoppingCart } from 'lucide-react';
+import { Search, Scan, Plus, Minus, AlertCircle, X, PlusCircle, Edit2, Printer, ShoppingCart, Trash2 } from 'lucide-react';
 import { BarcodeScanner } from '../components/BarcodeScanner';
 import { BarcodeLabel } from '../components/BarcodeLabel';
 import { toast } from 'sonner';
@@ -22,9 +22,11 @@ export function Inventory() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'IN' | 'OUT' | null>(null);
   const [showBarcodeLabel, setShowBarcodeLabel] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   const isTechnician = profile?.role === 'admin' || profile?.role === 'storekeeper' || profile?.role === 'technician';
   const isStorekeeper = profile?.role === 'admin' || profile?.role === 'storekeeper';
+  const isAdmin = profile?.role === 'admin';
 
   useEffect(() => {
     const q = query(collection(db, 'products'));
@@ -183,6 +185,24 @@ export function Inventory() {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    if (!isAdmin) {
+      toast.error('Permission denied. Admin access required.');
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'products', productToDelete));
+      toast.success('Product deleted from inventory.');
+      setProductToDelete(null);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete product.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -246,6 +266,18 @@ export function Inventory() {
               {product.isLowStock && (
                 <AlertCircle size={20} className="text-amber-500" />
               )}
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setProductToDelete(product.id);
+                  }}
+                  className="p-1 text-zinc-300 hover:text-red-500 transition-colors ml-2"
+                  title="Quick Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
             
             <div className="flex items-end justify-between">
@@ -269,6 +301,37 @@ export function Inventory() {
           </div>
         ))}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
+              <Trash2 size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-zinc-900">Delete Product?</h3>
+              <p className="text-sm text-zinc-500">
+                This action is permanent and will remove this product from all current and future inventory views.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={handleDeleteProduct}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-100"
+              >
+                Yes, Delete Product
+              </button>
+              <button
+                onClick={() => setProductToDelete(null)}
+                className="w-full bg-zinc-100 text-zinc-600 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+              >
+                No, Keep it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stock Adjustment Modal */}
       {selectedProduct && (
@@ -303,6 +366,18 @@ export function Inventory() {
                         title="Edit Product"
                       >
                         <Edit2 size={20} />
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductToDelete(selectedProduct.id);
+                        }}
+                        className="p-2 text-zinc-400 hover:text-red-600 transition-colors bg-zinc-50 rounded-lg"
+                        title="Delete Product"
+                      >
+                        <Trash2 size={20} />
                       </button>
                     )}
                     <button onClick={() => setSelectedProduct(null)} className="p-2 text-zinc-400 hover:text-zinc-900">

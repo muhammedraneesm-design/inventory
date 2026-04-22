@@ -38,6 +38,7 @@ export function Tools() {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [showBarcodeLabel, setShowBarcodeLabel] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [toolToDelete, setToolToDelete] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -170,11 +171,12 @@ export function Tools() {
     }
   };
 
-  const handleDeleteTool = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this tool from the register?')) return;
+  const handleDeleteTool = async () => {
+    if (!toolToDelete) return;
     try {
-      await deleteDoc(doc(db, 'tools', id));
+      await deleteDoc(doc(db, 'tools', toolToDelete));
       toast.success('Tool removed.');
+      setToolToDelete(null);
     } catch (error) {
       toast.error('Failed to remove tool.');
     }
@@ -337,8 +339,8 @@ export function Tools() {
                 )}
                 {isAdmin && (
                   <button
-                    onClick={() => handleDeleteTool(tool.id)}
-                    className="p-2 text-zinc-400 hover:text-red-600 transition-colors"
+                    onClick={() => setToolToDelete(tool.id)}
+                    className="p-2 text-zinc-400 hover:text-red-600 transition-colors bg-zinc-100 rounded-lg"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -369,6 +371,37 @@ export function Tools() {
           </div>
         ))}
       </div>
+
+      {/* Tool Delete Confirmation Modal */}
+      {toolToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
+              <Trash2 size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-zinc-900">Remove Tool?</h3>
+              <p className="text-sm text-zinc-500">
+                Are you sure you want to remove this tool from the digital register? This cannot be undone.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={handleDeleteTool}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-100"
+              >
+                Yes, Remove Tool
+              </button>
+              <button
+                onClick={() => setToolToDelete(null)}
+                className="w-full bg-zinc-100 text-zinc-600 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-all"
+              >
+                No, Keep it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {(isAddModalOpen || isEditModalOpen) && (
@@ -450,6 +483,16 @@ export function Tools() {
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900"
                   placeholder="https://example.com/photo.jpg"
                 />
+                {formData.imageUrl && (
+                  <div className="mt-2 h-40 rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50">
+                    <img 
+                      src={formData.imageUrl} 
+                      alt="Preview" 
+                      className="w-full h-full object-contain"
+                      onError={(e) => (e.currentTarget.parentElement!.style.display = 'none')}
+                    />
+                  </div>
+                )}
               </div>
 
               <button
