@@ -6,7 +6,7 @@ import importedConfig from '../firebase-applet-config.json';
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (importedConfig as any).apiKey,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (importedConfig as any).authDomain,
-  projectId: studio-1006848088-37f49,
+  projectId: "studio-1006848088-37f49",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || (importedConfig as any).storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (importedConfig as any).messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || (importedConfig as any).appId,
