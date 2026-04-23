@@ -35,7 +35,8 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        (request.auth.token.email == "muhammedraneesm@gmail.com" && request.auth.token.email_verified == true) ||
+        request.auth.token.email == "muhammedraneesm@reem.local" ||
+        request.auth.token.email == "muhammedraneesm@gmail.com" ||
         (userExists() && getUserData().role == 'admin')
       );
     }
@@ -73,8 +74,9 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['email', 'role', 'name', 'uid']) &&
+      return data.keys().hasAll(['email', 'username', 'role', 'name', 'uid']) &&
              data.email is string &&
+             data.username is string &&
              data.role in ['admin', 'storekeeper', 'technician'] &&
              data.name is string &&
              data.uid is string;
@@ -127,7 +129,7 @@ service cloud.firestore {
     }
 
     match /test/connection {
-      allow read: if isAuthenticated();
+      allow read: if true;
     }
 
     match /maintenance_logs/{logId} {

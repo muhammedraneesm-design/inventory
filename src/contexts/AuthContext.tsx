@@ -1,28 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocFromServer } from 'firebase/firestore';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { UserProfile, UserRole } from '../types';
-import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
-
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. ");
-    }
-  }
-}
-testConnection();
+import { UserProfile } from '../types';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  login: () => Promise<void>;
-  loginWithEmail: (email: string, pass: string) => Promise<void>;
-  registerWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   isAuthReady: boolean;
 }
@@ -31,7 +17,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem('user_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [loading, setLoading] = useState(true);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
@@ -39,39 +28,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        const docRef = doc(db, 'users', user.uid);
-        try {
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const data = docSnap.data() as UserProfile;
-            const isAdminEmail = user.email === "muhammedraneesm@gmail.com";
-            
-            // Sync role if it's the master admin email
-            if (isAdminEmail && data.role !== 'admin') {
-              const updatedProfile = { ...data, role: 'admin' as const };
-              await setDoc(docRef, updatedProfile, { merge: true });
+        const loadProfile = async (retryCount = 0) => {
+          const docRef = doc(db, 'users', user.uid);
+          try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              const data = docSnap.data() as UserProfile;
+              const isAdmin = data.username === "muhammedraneesm" || data.username === "admin" || data.email === "muhammedraneesm@gmail.com";
+              let updatedProfile = data;
+              if (isAdmin && data.role !== 'admin') {
+                updatedProfile = { ...data, role: 'admin' as const };
+                await setDoc(docRef, updatedProfile, { merge: true });
+              }
               setProfile(updatedProfile);
+              localStorage.setItem('user_profile', JSON.stringify(updatedProfile));
             } else {
-              setProfile(data);
+              const email = user.email || '';
+              const username = email.split('@')[0];
+              const isAdmin = email === "muhammedraneesm@gmail.com";
+              const newProfile: UserProfile = {
+                uid: user.uid,
+                email: email,
+                username: username,
+                name: user.displayName || username,
+                role: isAdmin ? 'admin' : 'technician'
+              };
+              await setDoc(docRef, newProfile);
+              setProfile(newProfile);
+              localStorage.setItem('user_profile', JSON.stringify(newProfile));
             }
-          } else {
-            // Default role for new users
-            const isAdminEmail = user.email === "muhammedraneesm@gmail.com";
-            const newProfile: UserProfile = {
-              uid: user.uid,
-              email: user.email || '',
-              name: user.displayName || 'User',
-              role: isAdminEmail ? 'admin' : 'technician' // Default role
-            };
-            await setDoc(docRef, newProfile);
-            setProfile(newProfile);
+          } catch (error: any) {
+            console.warn(`Profile load attempt ${retryCount + 1} failed:`, error.message);
+            if (retryCount < 3) {
+              const delay = Math.pow(2, retryCount) * 1000;
+              setTimeout(() => loadProfile(retryCount + 1), delay);
+            } else {
+              console.error("Max retries reached for profile loading:", error);
+            }
           }
-        } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
-        }
+        };
+        loadProfile();
       } else {
         setProfile(null);
+        localStorage.removeItem('user_profile');
       }
       setLoading(false);
       setIsAuthReady(true);
@@ -80,18 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async () => {
+  const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-  };
-
-  const loginWithEmail = async (email: string, pass: string) => {
-    await signInWithEmailAndPassword(auth, email, pass);
-  };
-
-  const registerWithEmail = async (email: string, pass: string, name: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(userCredential.user, { displayName: name });
   };
 
   const logout = async () => {
@@ -99,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, loginWithEmail, registerWithEmail, logout, isAuthReady }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, logout, isAuthReady }}>
       {children}
     </AuthContext.Provider>
   );

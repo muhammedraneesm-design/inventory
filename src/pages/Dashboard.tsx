@@ -107,37 +107,37 @@ export function Dashboard() {
           </button>
           {isTechnician && (
             <button
-              onClick={() => navigate('/maintenance')}
-              className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-all group"
-            >
-              <div className="p-3 rounded-xl bg-zinc-100 text-zinc-600 group-hover:bg-zinc-900 group-hover:text-white transition-all">
-                <Wrench size={24} />
-              </div>
-              <span className="text-sm font-bold text-zinc-700">Maintenance</span>
-            </button>
-          )}
-          {isStorekeeper && (
-            <>
-              <button
-                onClick={() => navigate('/orders')}
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-all group"
-              >
-                <div className="p-3 rounded-xl bg-zinc-100 text-zinc-600 group-hover:bg-zinc-900 group-hover:text-white transition-all">
-                  <ShoppingCart size={24} />
-                </div>
-                <span className="text-sm font-bold text-zinc-700">Stock Orders</span>
-              </button>
-              <button
-                onClick={() => navigate('/reports')}
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-all group"
-              >
-                <div className="p-3 rounded-xl bg-zinc-100 text-zinc-600 group-hover:bg-zinc-900 group-hover:text-white transition-all">
-                  <FileSpreadsheet size={24} />
-                </div>
-                <span className="text-sm font-bold text-zinc-700">Reports</span>
-              </button>
-            </>
-          )}
+               onClick={() => navigate('/maintenance')}
+               className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-all group"
+             >
+               <div className="p-3 rounded-xl bg-zinc-100 text-zinc-600 group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                 <Wrench size={24} />
+               </div>
+               <span className="text-sm font-bold text-zinc-700">Work Order</span>
+             </button>
+           )}
+           {isTechnician && (
+             <>
+               <button
+                 onClick={() => navigate('/orders')}
+                 className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-all group"
+               >
+                 <div className="p-3 rounded-xl bg-zinc-100 text-zinc-600 group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                   <ShoppingCart size={24} />
+                 </div>
+                 <span className="text-sm font-bold text-zinc-700">Purchase Order</span>
+               </button>
+               <button
+                 onClick={() => navigate('/reports')}
+                 className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-zinc-100 hover:bg-zinc-50 transition-all group"
+               >
+                 <div className="p-3 rounded-xl bg-zinc-100 text-zinc-600 group-hover:bg-zinc-900 group-hover:text-white transition-all">
+                   <FileSpreadsheet size={24} />
+                 </div>
+                 <span className="text-sm font-bold text-zinc-700">Report</span>
+               </button>
+             </>
+           )}
         </div>
       </div>
 

@@ -15,9 +15,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { label: 'Inventory', icon: Package, path: '/inventory', roles: ['admin', 'storekeeper', 'technician'] },
     { label: 'Add Product', icon: PlusCircle, path: '/add-product', roles: ['admin', 'storekeeper', 'technician'] },
     { label: 'Tool Register', icon: Wrench, path: '/tools', roles: ['admin', 'technician', 'storekeeper'] },
-    { label: 'Maintenance', icon: ClipboardList, path: '/maintenance', roles: ['admin', 'technician', 'storekeeper'] },
-    { label: 'Reports', icon: FileSpreadsheet, path: '/reports', roles: ['admin', 'storekeeper', 'technician'] },
-    { label: 'Stock Orders', icon: ShoppingCart, path: '/orders', roles: ['admin', 'storekeeper', 'technician'] },
+    { label: 'Work Order', icon: ClipboardList, path: '/maintenance', roles: ['admin', 'technician', 'storekeeper'] },
+    { label: 'Report', icon: FileSpreadsheet, path: '/reports', roles: ['admin', 'storekeeper', 'technician'] },
+    { label: 'Purchase Order', icon: ShoppingCart, path: '/orders', roles: ['admin', 'storekeeper', 'technician'] },
   ];
 
   const filteredNavItems = navItems.filter(item => 

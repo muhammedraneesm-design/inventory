@@ -29,6 +29,12 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const isOffline = error instanceof Error && (
+    error.message.includes('offline') || 
+    error.message.includes('network') ||
+    error.message.includes('unavailable')
+  );
+
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -46,7 +52,14 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     },
     operationType,
     path
+  };
+
+  if (isOffline) {
+    console.warn(`Firestore is currently offline or connecting (${operationType} at ${path}). Data might be delayed.`);
+    // We optionally still throw but with a cleaner message for the UI
+    throw new Error('Database connection is currently unstable. Please check your internet or try refreshing.');
   }
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
